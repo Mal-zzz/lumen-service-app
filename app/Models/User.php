@@ -6,10 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class User extends Model
 {
-    // protected $table = 'users';
+    protected $table = 'users';
 
     // Colom yang bisa diisi
-    protected $fillable = ['name', 'email'];
+    protected $fillable = ['name', 'email', 'password'];
 
     // menambahkan created_at dan update_at otomatis
     public $timestamps = true;

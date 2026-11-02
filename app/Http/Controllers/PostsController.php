@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Symfony\Component\HttpFoundation\AcceptHeader;
 
 class PostsController extends Controller
@@ -50,11 +51,19 @@ class PostsController extends Controller
             }
 
             // 2. KONDISI JIKA $id KOSONG (Menampilkan semua data dengan Pagination)
-            $posts = Post::orderBy("id", "DESC")->paginate(10);
-
+            $posts = Post::orderBy("id", "DESC")->paginate(2)->toArray();
+            $response = [
+                "total_count" => $posts['total'],
+                "limit" => $posts['per_page'],
+                "pagination" => [
+                    "next_page" => $posts['next_page_url'],
+                    "current_page" => $posts['current_page']
+                ],
+                "data" => $posts['data']
+            ];
             // Jika format yang diminta adalah JSON
             if ($acceptHeader === 'application/json') {
-                return response()->json($posts, 200);
+                return response()->json($response, 200);
             }
 
             // Jika format yang diminta adalah XML (Banyak data / list)
@@ -97,7 +106,20 @@ class PostsController extends Controller
             if ($contentTypeHeader === 'application/json') {
                 $input = $request->all();
 
+                $validationRules = [
+                    'title' => 'required|min:5',
+                    'content' => 'required|min:10',
+                    'status' => 'required|in:draft,published',
+                    'user_id' => 'required|exists:users,id'
+                ];
+
+                $validator = Validator::make($input, $validationRules);
+
                 // Menyimpan data baru ke database menggunakan Eloquent Model
+                if ($validator->fails()) {
+                    return response()->json( $validator->errors(), 400);
+                }
+
                 $post = Post::create($input);
 
                 return response()->json($post, 201); // Status 201 Created lebih ideal untuk penambahan data
@@ -130,6 +152,19 @@ class PostsController extends Controller
                 // Cek apakah data yang mau diubah ada
                 if (!$posts) {
                     abort(404, 'Post not found');
+                }
+
+                $validationRules = [
+                    'title' => 'required|min:5',
+                    'content' => 'required|min:10',
+                    'status' => 'required|in:draft,published',
+                    'user_id' => 'required|exists:users,id'
+                ];
+
+                $validator = Validator::make($inputs, $validationRules);
+
+                if ($validator->fails()) {
+                    return response()->json( $validator->errors(), 400);
                 }
 
                 // Melakukan update data
